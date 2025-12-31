@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Zap, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { z } from 'zod';
+import Footer from '@/components/Footer';
 
 const authSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -96,108 +97,111 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
-              <Zap className="w-6 h-6 text-primary-foreground" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-heading font-bold">
-            Lead<span className="text-gradient">Finder</span>
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            {isLogin ? 'Entre na sua conta' : 'Crie sua conta grátis'}
-          </p>
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1 flex items-center justify-center px-4 py-8 md:py-0">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-64 md:w-96 h-64 md:h-96 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-48 md:w-80 h-48 md:h-80 bg-accent/10 rounded-full blur-3xl" />
         </div>
 
-        <div className="gradient-card rounded-2xl border border-border p-8 shadow-elevated">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+        <div className="relative w-full max-w-md">
+          <div className="text-center mb-6 md:mb-8">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
+                <Zap className="w-5 h-5 md:w-6 md:h-6 text-primary-foreground" />
+              </div>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-heading font-bold">
+              Lead<span className="text-gradient">Finder</span>
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-2">
+              {isLogin ? 'Entre na sua conta' : 'Crie sua conta grátis'}
+            </p>
+          </div>
+
+          <div className="gradient-card rounded-2xl border border-border p-6 md:p-8 shadow-elevated">
+            <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
+              {!isLogin && (
+                <div className="relative">
+                  <User className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Seu nome completo"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="pl-10 md:pl-12 h-11 md:h-12 text-sm md:text-base"
+                    required={!isLogin}
+                  />
+                </div>
+              )}
+              
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Mail className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
                 <Input
-                  type="text"
-                  placeholder="Seu nome completo"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="pl-12"
-                  required={!isLogin}
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 md:pl-12 h-11 md:h-12 text-sm md:text-base"
+                  required
                 />
               </div>
-            )}
-            
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-12"
-                required
-              />
+
+              <div className="relative">
+                <Lock className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder="Sua senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10 md:pl-12 h-11 md:h-12 text-sm md:text-base"
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                variant="hero"
+                size="lg"
+                className="w-full h-11 md:h-12 text-sm md:text-base"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    Aguarde...
+                  </div>
+                ) : (
+                  <>
+                    {isLogin ? 'Entrar' : 'Criar conta'}
+                    <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-4 md:mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-xs md:text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {isLogin ? (
+                  <>
+                    Não tem conta? <span className="text-primary font-medium">Cadastre-se</span>
+                  </>
+                ) : (
+                  <>
+                    Já tem conta? <span className="text-primary font-medium">Faça login</span>
+                  </>
+                )}
+              </button>
             </div>
-
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="password"
-                placeholder="Sua senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-12"
-                required
-              />
-            </div>
-
-            <Button
-              type="submit"
-              variant="hero"
-              size="lg"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  Aguarde...
-                </div>
-              ) : (
-                <>
-                  {isLogin ? 'Entrar' : 'Criar conta'}
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {isLogin ? (
-                <>
-                  Não tem conta? <span className="text-primary font-medium">Cadastre-se</span>
-                </>
-              ) : (
-                <>
-                  Já tem conta? <span className="text-primary font-medium">Faça login</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
