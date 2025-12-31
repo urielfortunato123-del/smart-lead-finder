@@ -1,17 +1,23 @@
-import { Building2, MapPin, Phone, Mail, Globe, Copy, Check } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, Globe, Copy, Check, Heart, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { Company } from "@/types/company";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { saveLead } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CompanyCardProps {
   company: Company;
   index: number;
+  onSaved?: () => void;
 }
 
-const CompanyCard = ({ company, index }: CompanyCardProps) => {
+const CompanyCard = ({ company, index, onSaved }: CompanyCardProps) => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -21,6 +27,46 @@ const CompanyCard = ({ company, index }: CompanyCardProps) => {
       description: `${field} copiado para a área de transferência`,
     });
     setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleSaveLead = async () => {
+    if (!user) {
+      toast({
+        title: "Faça login",
+        description: "Você precisa estar logado para salvar leads",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await saveLead(company);
+      setIsSaved(true);
+      toast({
+        title: "Lead salvo!",
+        description: `${company.name} foi adicionado aos seus leads`,
+      });
+      onSaved?.();
+    } catch (error) {
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar o lead",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleWhatsApp = () => {
+    if (!company.phone) return;
+    
+    const cleanPhone = company.phone.replace(/\D/g, '');
+    const message = encodeURIComponent(
+      `Olá! Encontrei sua empresa através do LeadFinder e gostaria de conhecer mais sobre os serviços da ${company.name}.`
+    );
+    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
   };
 
   return (
@@ -42,11 +88,13 @@ const CompanyCard = ({ company, index }: CompanyCardProps) => {
             </span>
           </div>
         </div>
-        {company.size && (
-          <span className="px-3 py-1 text-xs font-medium rounded-full bg-secondary text-muted-foreground">
-            {company.size}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {company.size && (
+            <span className="px-3 py-1 text-xs font-medium rounded-full bg-secondary text-muted-foreground">
+              {company.size}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -136,6 +184,39 @@ const CompanyCard = ({ company, index }: CompanyCardProps) => {
               {company.website.replace(/^https?:\/\//, "")}
             </a>
           </div>
+        )}
+      </div>
+
+      <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          onClick={handleSaveLead}
+          disabled={isSaving || isSaved}
+        >
+          {isSaved ? (
+            <>
+              <Check className="w-4 h-4 mr-1 text-accent" />
+              Salvo
+            </>
+          ) : (
+            <>
+              <Heart className="w-4 h-4 mr-1" />
+              Salvar
+            </>
+          )}
+        </Button>
+        {company.phone && (
+          <Button
+            variant="accent"
+            size="sm"
+            className="flex-1"
+            onClick={handleWhatsApp}
+          >
+            <MessageCircle className="w-4 h-4 mr-1" />
+            WhatsApp
+          </Button>
         )}
       </div>
     </div>
