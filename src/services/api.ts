@@ -88,10 +88,7 @@ export const checkSearchLimit = async (): Promise<{ allowed: boolean; message: s
     return { allowed: false, message: 'Sua assinatura expirou. Renove para continuar.' };
   }
 
-  // For unlimited plans (999 searches)
-  if (plan.searches_per_day >= 999) {
-    return { allowed: true, message: 'OK', remaining: 999 };
-  }
+  // Check today's search count against plan limit
 
   // Check today's search count
   const today = new Date().toISOString().split('T')[0];
