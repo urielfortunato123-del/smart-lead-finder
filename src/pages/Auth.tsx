@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Zap, Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Zap, Mail, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
 import { z } from 'zod';
 import Footer from '@/components/Footer';
 
@@ -15,14 +15,34 @@ const authSchema = z.object({
 });
 
 const Auth = () => {
+  const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Check if user came from email confirmation
+  useEffect(() => {
+    const type = searchParams.get('type');
+    if (type === 'signup' || type === 'email_confirmation') {
+      toast({
+        title: 'Email confirmado!',
+        description: 'Sua conta foi verificada. Faça login para continuar.',
+      });
+    }
+  }, [searchParams, toast]);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +72,8 @@ const Auth = () => {
           let message = 'Erro ao fazer login';
           if (error.message.includes('Invalid login credentials')) {
             message = 'Email ou senha incorretos';
+          } else if (error.message.includes('Email not confirmed')) {
+            message = 'Por favor, confirme seu email antes de fazer login';
           }
           toast({
             title: 'Erro',
@@ -78,11 +100,7 @@ const Auth = () => {
             variant: 'destructive',
           });
         } else {
-          toast({
-            title: 'Conta criada!',
-            description: 'Você já pode começar a usar o LeadFinder',
-          });
-          navigate('/');
+          setShowConfirmation(true);
         }
       }
     } catch (error) {
@@ -95,6 +113,59 @@ const Auth = () => {
       setIsLoading(false);
     }
   };
+
+  // Show confirmation message after signup
+  if (showConfirmation) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="flex-1 flex items-center justify-center px-4 py-8">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-1/4 left-1/4 w-64 md:w-96 h-64 md:h-96 bg-primary/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-1/4 right-1/4 w-48 md:w-80 h-48 md:h-80 bg-accent/10 rounded-full blur-3xl" />
+          </div>
+
+          <div className="relative w-full max-w-md text-center">
+            <div className="gradient-card rounded-2xl border border-border p-8 md:p-10 shadow-elevated">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="w-8 h-8 md:w-10 md:h-10 text-accent" />
+              </div>
+              
+              <h1 className="text-2xl md:text-3xl font-heading font-bold mb-4">
+                Confirme seu email
+              </h1>
+              
+              <p className="text-muted-foreground mb-6">
+                Enviamos um link de confirmação para{" "}
+                <span className="text-foreground font-medium">{email}</span>
+              </p>
+              
+              <p className="text-sm text-muted-foreground mb-8">
+                Clique no link do email para ativar sua conta e acessar o LeadFinder.
+              </p>
+
+              <div className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setShowConfirmation(false);
+                    setIsLogin(true);
+                  }}
+                >
+                  Já confirmei, fazer login
+                </Button>
+                
+                <p className="text-xs text-muted-foreground">
+                  Não recebeu? Verifique sua pasta de spam
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

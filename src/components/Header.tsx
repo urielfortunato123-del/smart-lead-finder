@@ -1,4 +1,4 @@
-import { Zap, LogOut, User, FolderHeart, Menu, X } from "lucide-react";
+import { Zap, LogOut, User, FolderHeart, Menu, X, CreditCard } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,12 @@ const Header = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-4">
+          <Link to="/pricing">
+            <Button variant="ghost" size="sm">
+              <CreditCard className="w-4 h-4 mr-2" />
+              Planos
+            </Button>
+          </Link>
           {user ? (
             <>
               <Link to="/leads">
@@ -72,6 +78,12 @@ const Header = () => {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-card/95 backdrop-blur-lg animate-fade-in">
           <nav className="px-4 py-4 space-y-3">
+            <Link to="/pricing" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start">
+                <CreditCard className="w-4 h-4 mr-2" />
+                Planos e Preços
+              </Button>
+            </Link>
             {user ? (
               <>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary">
