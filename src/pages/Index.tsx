@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import SearchHero from "@/components/SearchHero";
 import StatsBar from "@/components/StatsBar";
 import ResultsSection from "@/components/ResultsSection";
+import Footer from "@/components/Footer";
 import { Company } from "@/types/company";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,9 +47,9 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="pt-20">
+      <main className="pt-16 md:pt-20 flex-1">
         <SearchHero onSearch={handleSearch} isLoading={isLoading} />
         <StatsBar />
         <ResultsSection
@@ -57,6 +58,7 @@ const Index = () => {
           isLoading={isLoading}
         />
       </main>
+      <Footer />
     </div>
   );
 };
