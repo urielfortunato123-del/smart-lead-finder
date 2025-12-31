@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_searches: {
+        Row: {
+          created_at: string | null
+          id: string
+          search_count: number | null
+          search_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          search_count?: number | null
+          search_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          search_count?: number | null
+          search_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      plans: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          duration_months: number
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+          searches_per_day: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          duration_months?: number
+          id: string
+          is_active?: boolean | null
+          name: string
+          price?: number
+          searches_per_day?: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          duration_months?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          searches_per_day?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -124,6 +181,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string | null
+          ends_at: string | null
+          id: string
+          is_active: boolean | null
+          plan_id: string
+          starts_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          plan_id?: string
+          starts_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          plan_id?: string
+          starts_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

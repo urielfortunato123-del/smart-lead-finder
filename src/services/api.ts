@@ -20,7 +20,21 @@ export interface SavedLead {
   updated_at: string;
 }
 
+export interface UserSubscription {
+  plan_id: string;
+  plan_name: string;
+  searches_per_day: number;
+  is_active: boolean;
+  ends_at: string | null;
+}
+
 export const searchCompanies = async (sector: string, location?: string): Promise<Company[]> => {
+  // Check user's search limit first
+  const canSearch = await checkSearchLimit();
+  if (!canSearch.allowed) {
+    throw new Error(canSearch.message);
+  }
+
   const { data, error } = await supabase.functions.invoke('search-companies', {
     body: { sector, location },
   });
@@ -34,7 +48,131 @@ export const searchCompanies = async (sector: string, location?: string): Promis
     throw new Error(data.error);
   }
 
+  // Increment search count
+  await incrementSearchCount();
+
   return data.companies || [];
+};
+
+export const checkSearchLimit = async (): Promise<{ allowed: boolean; message: string; remaining?: number }> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { allowed: false, message: 'Você precisa estar logado para fazer buscas' };
+  }
+
+  // Get user's subscription
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('plan_id, is_active, ends_at')
+    .eq('user_id', user.id)
+    .single();
+
+  if (!subscription) {
+    return { allowed: false, message: 'Assinatura não encontrada' };
+  }
+
+  // Get plan details
+  const { data: plan } = await supabase
+    .from('plans')
+    .select('searches_per_day')
+    .eq('id', subscription.plan_id)
+    .single();
+
+  if (!plan) {
+    return { allowed: false, message: 'Plano não encontrado' };
+  }
+
+  // Check if subscription is still active (for paid plans)
+  if (subscription.ends_at && new Date(subscription.ends_at) < new Date()) {
+    return { allowed: false, message: 'Sua assinatura expirou. Renove para continuar.' };
+  }
+
+  // For unlimited plans (999 searches)
+  if (plan.searches_per_day >= 999) {
+    return { allowed: true, message: 'OK', remaining: 999 };
+  }
+
+  // Check today's search count
+  const today = new Date().toISOString().split('T')[0];
+  const { data: dailySearch } = await supabase
+    .from('daily_searches')
+    .select('search_count')
+    .eq('user_id', user.id)
+    .eq('search_date', today)
+    .single();
+
+  const currentCount = dailySearch?.search_count || 0;
+  const remaining = plan.searches_per_day - currentCount;
+
+  if (remaining <= 0) {
+    return { 
+      allowed: false, 
+      message: 'Você atingiu o limite de buscas diárias do plano gratuito. Faça upgrade para continuar.',
+      remaining: 0
+    };
+  }
+
+  return { allowed: true, message: 'OK', remaining };
+};
+
+export const incrementSearchCount = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  // Try to update existing record
+  const { data: existing } = await supabase
+    .from('daily_searches')
+    .select('id, search_count')
+    .eq('user_id', user.id)
+    .eq('search_date', today)
+    .single();
+
+  if (existing) {
+    await supabase
+      .from('daily_searches')
+      .update({ search_count: existing.search_count + 1 })
+      .eq('id', existing.id);
+  } else {
+    await supabase
+      .from('daily_searches')
+      .insert([{
+        user_id: user.id,
+        search_date: today,
+        search_count: 1,
+      }]);
+  }
+};
+
+export const getUserSubscription = async (): Promise<UserSubscription | null> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('plan_id, is_active, ends_at')
+    .eq('user_id', user.id)
+    .single();
+
+  if (!subscription) return null;
+
+  const { data: plan } = await supabase
+    .from('plans')
+    .select('name, searches_per_day')
+    .eq('id', subscription.plan_id)
+    .single();
+
+  if (!plan) return null;
+
+  return {
+    plan_id: subscription.plan_id,
+    plan_name: plan.name,
+    searches_per_day: plan.searches_per_day,
+    is_active: subscription.is_active,
+    ends_at: subscription.ends_at,
+  };
 };
 
 export const saveSearchHistory = async (query: string, resultsCount: number) => {
