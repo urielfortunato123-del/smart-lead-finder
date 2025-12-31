@@ -7,9 +7,10 @@ interface ResultsSectionProps {
   companies: Company[];
   searchQuery: string;
   isLoading: boolean;
+  onLeadSaved?: () => void;
 }
 
-const ResultsSection = ({ companies, searchQuery, isLoading }: ResultsSectionProps) => {
+const ResultsSection = ({ companies, searchQuery, isLoading, onLeadSaved }: ResultsSectionProps) => {
   if (isLoading) {
     return (
       <section className="py-16 px-4">
@@ -106,7 +107,12 @@ const ResultsSection = ({ companies, searchQuery, isLoading }: ResultsSectionPro
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {companies.map((company, index) => (
-            <CompanyCard key={company.id} company={company} index={index} />
+            <CompanyCard 
+              key={company.id} 
+              company={company} 
+              index={index}
+              onSaved={onLeadSaved}
+            />
           ))}
         </div>
       </div>
