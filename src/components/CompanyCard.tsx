@@ -74,22 +74,22 @@ const CompanyCard = ({ company, index, onSaved }: CompanyCardProps) => {
       className="gradient-card rounded-xl border border-border p-4 md:p-6 shadow-card hover:shadow-elevated transition-all duration-300 hover:border-primary/50 animate-slide-up"
       style={{ animationDelay: `${index * 0.05}s` }}
     >
-      <div className="flex items-start justify-between mb-3 md:mb-4">
-        <div className="flex items-center gap-2 md:gap-3">
+      <div className="flex items-start justify-between gap-2 mb-3 md:mb-4">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
           <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg gradient-primary flex items-center justify-center shadow-glow shrink-0">
             <Building2 className="w-5 h-5 md:w-6 md:h-6 text-primary-foreground" />
           </div>
-          <div className="min-w-0">
-            <h3 className="font-heading font-semibold text-base md:text-lg text-foreground truncate">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-heading font-semibold text-base md:text-lg text-foreground truncate" title={company.name}>
               {company.name}
             </h3>
-            <span className="text-xs md:text-sm text-accent font-medium">
+            <span className="text-xs md:text-sm text-accent font-medium truncate block">
               {company.sector}
             </span>
           </div>
         </div>
         {company.size && (
-          <span className="hidden md:inline-block px-3 py-1 text-xs font-medium rounded-full bg-secondary text-muted-foreground shrink-0">
+          <span className="hidden md:inline-block px-3 py-1 text-xs font-medium rounded-full bg-secondary text-muted-foreground shrink-0 whitespace-nowrap">
             {company.size}
           </span>
         )}
