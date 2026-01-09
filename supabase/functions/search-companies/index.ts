@@ -48,7 +48,7 @@ IMPORTANTE: Retorne APENAS um array JSON válido, sem texto adicional, seguindo 
   }
 ]`;
 
-    const userPrompt = `Gere 12 empresas do setor "${sector}"${locationContext}. 
+    const userPrompt = `Gere 25 empresas do setor "${sector}"${locationContext}. 
 Inclua variedade de portes (microempresa, pequena, média, grande).
 Use cidades e bairros reais. Gere CNPJs únicos e formatados corretamente.
 Retorne APENAS o array JSON, sem explicações.`;
