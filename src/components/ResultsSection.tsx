@@ -23,6 +23,7 @@ interface ResultsSectionProps {
 const ResultsSection = ({ companies, searchQuery, isLoading, onLeadSaved }: ResultsSectionProps) => {
   const [sizeFilters, setSizeFilters] = useState<string[]>([]);
   const [stateFilters, setStateFilters] = useState<string[]>([]);
+  const [cityFilters, setCityFilters] = useState<string[]>([]);
 
   // Extrair valores únicos para filtros
   const uniqueSizes = useMemo(() => {
@@ -35,14 +36,20 @@ const ResultsSection = ({ companies, searchQuery, isLoading, onLeadSaved }: Resu
     return states.sort() as string[];
   }, [companies]);
 
+  const uniqueCities = useMemo(() => {
+    const cities = [...new Set(companies.map(c => c.city).filter(Boolean))];
+    return cities.sort() as string[];
+  }, [companies]);
+
   // Aplicar filtros
   const filteredCompanies = useMemo(() => {
     return companies.filter(company => {
       const matchesSize = sizeFilters.length === 0 || sizeFilters.includes(company.size || '');
       const matchesState = stateFilters.length === 0 || stateFilters.includes(company.state || '');
-      return matchesSize && matchesState;
+      const matchesCity = cityFilters.length === 0 || cityFilters.includes(company.city || '');
+      return matchesSize && matchesState && matchesCity;
     });
-  }, [companies, sizeFilters, stateFilters]);
+  }, [companies, sizeFilters, stateFilters, cityFilters]);
 
   const toggleSizeFilter = (size: string) => {
     setSizeFilters(prev => 
@@ -56,12 +63,19 @@ const ResultsSection = ({ companies, searchQuery, isLoading, onLeadSaved }: Resu
     );
   };
 
+  const toggleCityFilter = (city: string) => {
+    setCityFilters(prev => 
+      prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]
+    );
+  };
+
   const clearFilters = () => {
     setSizeFilters([]);
     setStateFilters([]);
+    setCityFilters([]);
   };
 
-  const hasActiveFilters = sizeFilters.length > 0 || stateFilters.length > 0;
+  const hasActiveFilters = sizeFilters.length > 0 || stateFilters.length > 0 || cityFilters.length > 0;
 
   if (isLoading) {
     return (
@@ -154,7 +168,7 @@ const ResultsSection = ({ companies, searchQuery, isLoading, onLeadSaved }: Resu
                   Filtrar
                   {hasActiveFilters && (
                     <Badge variant="secondary" className="ml-2 px-1.5 py-0.5 text-xs">
-                      {sizeFilters.length + stateFilters.length}
+                      {sizeFilters.length + stateFilters.length + cityFilters.length}
                     </Badge>
                   )}
                 </Button>
@@ -179,6 +193,17 @@ const ResultsSection = ({ companies, searchQuery, isLoading, onLeadSaved }: Resu
                     onCheckedChange={() => toggleStateFilter(state)}
                   >
                     {state}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Cidade</DropdownMenuLabel>
+                {uniqueCities.map((city) => (
+                  <DropdownMenuCheckboxItem
+                    key={city}
+                    checked={cityFilters.includes(city)}
+                    onCheckedChange={() => toggleCityFilter(city)}
+                  >
+                    {city}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuContent>
@@ -209,6 +234,12 @@ const ResultsSection = ({ companies, searchQuery, isLoading, onLeadSaved }: Resu
               {stateFilters.map(state => (
                 <Badge key={state} variant="outline" className="cursor-pointer" onClick={() => toggleStateFilter(state)}>
                   {state}
+                  <X className="w-3 h-3 ml-1" />
+                </Badge>
+              ))}
+              {cityFilters.map(city => (
+                <Badge key={city} variant="outline" className="cursor-pointer" onClick={() => toggleCityFilter(city)}>
+                  {city}
                   <X className="w-3 h-3 ml-1" />
                 </Badge>
               ))}
