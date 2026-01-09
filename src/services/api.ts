@@ -29,29 +29,41 @@ export interface UserSubscription {
 }
 
 export const searchCompanies = async (sector: string, location?: string): Promise<Company[]> => {
+  console.log('Starting search for sector:', sector, 'location:', location);
+  
   // Check user's search limit first
   const canSearch = await checkSearchLimit();
+  console.log('Search limit check result:', canSearch);
+  
   if (!canSearch.allowed) {
     throw new Error(canSearch.message);
   }
 
+  console.log('Invoking search-companies edge function...');
+  
   const { data, error } = await supabase.functions.invoke('search-companies', {
     body: { sector, location },
   });
+
+  console.log('Edge function response:', { data, error });
 
   if (error) {
     console.error('Error searching companies:', error);
     throw new Error(error.message || 'Erro ao buscar empresas');
   }
 
-  if (data.error) {
+  if (data?.error) {
+    console.error('Data error from edge function:', data.error);
     throw new Error(data.error);
   }
 
   // Increment search count
   await incrementSearchCount();
 
-  return data.companies || [];
+  const companies = data?.companies || [];
+  console.log('Search completed, found', companies.length, 'companies');
+  
+  return companies;
 };
 
 export const checkSearchLimit = async (): Promise<{ allowed: boolean; message: string; remaining?: number }> => {
