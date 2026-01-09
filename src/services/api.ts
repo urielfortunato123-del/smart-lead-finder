@@ -62,14 +62,29 @@ export const checkSearchLimit = async (): Promise<{ allowed: boolean; message: s
   }
 
   // Get user's subscription
-  const { data: subscription } = await supabase
+  let { data: subscription } = await supabase
     .from('subscriptions')
     .select('plan_id, is_active, ends_at')
     .eq('user_id', user.id)
     .single();
 
+  // Se não tiver assinatura, criar automaticamente uma gratuita
   if (!subscription) {
-    return { allowed: false, message: 'Assinatura não encontrada' };
+    const { data: newSub, error: insertError } = await supabase
+      .from('subscriptions')
+      .insert([{
+        user_id: user.id,
+        plan_id: 'free',
+        is_active: true,
+      }])
+      .select('plan_id, is_active, ends_at')
+      .single();
+
+    if (insertError) {
+      console.error('Error creating free subscription:', insertError);
+      return { allowed: false, message: 'Erro ao criar assinatura gratuita' };
+    }
+    subscription = newSub;
   }
 
   // Get plan details
