@@ -62,11 +62,18 @@ const CompanyCard = ({ company, index, onSaved }: CompanyCardProps) => {
   const handleWhatsApp = () => {
     if (!company.phone) return;
     
+    // Limpar telefone - remover tudo que não é número
     const cleanPhone = company.phone.replace(/\D/g, '');
+    
+    // Garantir que tenha o código do país
+    const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+    
     const message = encodeURIComponent(
       `Olá! Encontrei sua empresa através do LeadFinder e gostaria de conhecer mais sobre os serviços da ${company.name}.`
     );
-    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
+    
+    // Usar web.whatsapp.com para desktop - funciona melhor
+    window.open(`https://web.whatsapp.com/send?phone=${phoneWithCountry}&text=${message}`, '_blank');
   };
 
   return (
