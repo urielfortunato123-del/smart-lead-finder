@@ -61,6 +61,18 @@ export const checkSearchLimit = async (): Promise<{ allowed: boolean; message: s
     return { allowed: false, message: 'Você precisa estar logado para fazer buscas' };
   }
 
+  // Verificar se é admin - admins têm busca ilimitada
+  const { data: adminRole } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('role', 'admin')
+    .single();
+
+  if (adminRole) {
+    return { allowed: true, message: 'OK', remaining: 999999 };
+  }
+
   // Get user's subscription
   let { data: subscription } = await supabase
     .from('subscriptions')
