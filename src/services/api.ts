@@ -1,324 +1,211 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Company } from '@/types/company';
 
-export interface SavedLead {
+export interface Category {
   id: string;
-  user_id: string;
-  company_name: string;
-  cnpj: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
-  sector: string | null;
-  company_size: string | null;
-  status: 'new' | 'contacted' | 'qualified' | 'proposal' | 'closed' | 'lost';
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
+  name: string;
+  icon: string;
+  slug: string;
 }
 
-export interface UserSubscription {
-  plan_id: string;
-  plan_name: string;
-  searches_per_day: number;
-  is_active: boolean;
-  ends_at: string | null;
+export interface Product {
+  id: string;
+  category_id: string;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  price_min: number | null;
+  price_max: number | null;
+  price_typical: number | null;
+  performance_score: number;
+  camera_score: number;
+  battery_score: number;
+  build_quality_score: number;
+  specs: unknown;
 }
 
-export const searchCompanies = async (sector: string, location?: string): Promise<Company[]> => {
-  console.log('Starting search for sector:', sector, 'location:', location);
-  
-  // Check user's search limit first
-  const canSearch = await checkSearchLimit();
-  console.log('Search limit check result:', canSearch);
-  
-  if (!canSearch.allowed) {
-    throw new Error(canSearch.message);
-  }
+export interface UserProfile {
+  usageLevel: 'basic' | 'intermediate' | 'intense';
+  cameraImportance: 'low' | 'medium' | 'high';
+  batteryNeeds: 'few_hours' | 'all_day' | 'more_than_day';
+  budgetRange: 'economic' | 'intermediate' | 'premium';
+}
 
-  console.log('Invoking search-companies edge function...');
-  
-  const { data, error } = await supabase.functions.invoke('search-companies', {
-    body: { sector, location },
-  });
-
-  console.log('Edge function response:', { data, error });
-
-  if (error) {
-    console.error('Error searching companies:', error);
-    throw new Error(error.message || 'Erro ao buscar empresas');
-  }
-
-  if (data?.error) {
-    console.error('Data error from edge function:', data.error);
-    throw new Error(data.error);
-  }
-
-  // Increment search count
-  await incrementSearchCount();
-
-  const companies = data?.companies || [];
-  console.log('Search completed, found', companies.length, 'companies');
-  
-  return companies;
-};
-
-export const checkSearchLimit = async (): Promise<{ allowed: boolean; message: string; remaining?: number }> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    return { allowed: false, message: 'Você precisa estar logado para fazer buscas' };
-  }
-
-  // Verificar se é admin - admins têm busca ilimitada
-  const { data: adminRole } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .eq('role', 'admin')
-    .single();
-
-  if (adminRole) {
-    return { allowed: true, message: 'OK', remaining: 999999 };
-  }
-
-  // Get user's subscription
-  let { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('plan_id, is_active, ends_at')
-    .eq('user_id', user.id)
-    .single();
-
-  // Se não tiver assinatura, criar automaticamente uma gratuita
-  if (!subscription) {
-    const { data: newSub, error: insertError } = await supabase
-      .from('subscriptions')
-      .insert([{
-        user_id: user.id,
-        plan_id: 'free',
-        is_active: true,
-      }])
-      .select('plan_id, is_active, ends_at')
-      .single();
-
-    if (insertError) {
-      console.error('Error creating free subscription:', insertError);
-      return { allowed: false, message: 'Erro ao criar assinatura gratuita' };
-    }
-    subscription = newSub;
-  }
-
-  // Get plan details
-  const { data: plan } = await supabase
-    .from('plans')
-    .select('searches_per_day')
-    .eq('id', subscription.plan_id)
-    .single();
-
-  if (!plan) {
-    return { allowed: false, message: 'Plano não encontrado' };
-  }
-
-  // Check if subscription is still active (for paid plans)
-  if (subscription.ends_at && new Date(subscription.ends_at) < new Date()) {
-    return { allowed: false, message: 'Sua assinatura expirou. Renove para continuar.' };
-  }
-
-  // Check today's search count against plan limit
-
-  // Check today's search count
-  const today = new Date().toISOString().split('T')[0];
-  const { data: dailySearch } = await supabase
-    .from('daily_searches')
-    .select('search_count')
-    .eq('user_id', user.id)
-    .eq('search_date', today)
-    .single();
-
-  const currentCount = dailySearch?.search_count || 0;
-  const remaining = plan.searches_per_day - currentCount;
-
-  if (remaining <= 0) {
-    return { 
-      allowed: false, 
-      message: 'Você atingiu o limite de buscas diárias do plano gratuito. Faça upgrade para continuar.',
-      remaining: 0
-    };
-  }
-
-  return { allowed: true, message: 'OK', remaining };
-};
-
-export const incrementSearchCount = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const today = new Date().toISOString().split('T')[0];
-
-  // Try to update existing record
-  const { data: existing } = await supabase
-    .from('daily_searches')
-    .select('id, search_count')
-    .eq('user_id', user.id)
-    .eq('search_date', today)
-    .single();
-
-  if (existing) {
-    await supabase
-      .from('daily_searches')
-      .update({ search_count: existing.search_count + 1 })
-      .eq('id', existing.id);
-  } else {
-    await supabase
-      .from('daily_searches')
-      .insert([{
-        user_id: user.id,
-        search_date: today,
-        search_count: 1,
-      }]);
-  }
-};
-
-export const getUserSubscription = async (): Promise<UserSubscription | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('plan_id, is_active, ends_at')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!subscription) return null;
-
-  const { data: plan } = await supabase
-    .from('plans')
-    .select('name, searches_per_day')
-    .eq('id', subscription.plan_id)
-    .single();
-
-  if (!plan) return null;
-
-  return {
-    plan_id: subscription.plan_id,
-    plan_name: plan.name,
-    searches_per_day: plan.searches_per_day,
-    is_active: subscription.is_active,
-    ends_at: subscription.ends_at,
+export interface ComparisonResult {
+  score: number;
+  recommendation: 'not_worth' | 'depends' | 'worth_it';
+  priceRange: { min: number; max: number; typical: number };
+  analysis: {
+    performanceGain: 'low' | 'medium' | 'high';
+    purchaseTiming: 'urgent' | 'no_rush' | 'wait';
+    costBenefit: 'poor' | 'good' | 'excellent';
   };
-};
+  conclusion: string;
+}
 
-export const saveSearchHistory = async (query: string, resultsCount: number) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const { error } = await supabase
-    .from('search_history')
-    .insert([{
-      user_id: user.id,
-      query,
-      results_count: resultsCount,
-    }]);
+export const getCategories = async (): Promise<Category[]> => {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('name');
 
   if (error) {
-    console.error('Error saving search history:', error);
+    console.error('Error fetching categories:', error);
+    return [];
   }
+
+  return data || [];
 };
 
-export const getSearchHistory = async () => {
+export const searchProducts = async (categoryId: string, query: string): Promise<Product[]> => {
   const { data, error } = await supabase
-    .from('search_history')
+    .from('products')
     .select('*')
-    .order('created_at', { ascending: false })
+    .eq('category_id', categoryId)
+    .ilike('name', `%${query}%`)
     .limit(10);
 
   if (error) {
-    console.error('Error fetching search history:', error);
+    console.error('Error searching products:', error);
     return [];
+  }
+
+  return data || [];
+};
+
+export const getProductById = async (id: string): Promise<Product | null> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching product:', error);
+    return null;
   }
 
   return data;
 };
 
-export const saveLead = async (company: Company): Promise<SavedLead | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado');
+export const calculateComparison = (
+  currentProduct: Product,
+  newProduct: Product,
+  profile: UserProfile
+): ComparisonResult => {
+  // Weight based on user profile
+  const weights = {
+    performance: profile.usageLevel === 'intense' ? 0.4 : profile.usageLevel === 'intermediate' ? 0.3 : 0.2,
+    camera: profile.cameraImportance === 'high' ? 0.35 : profile.cameraImportance === 'medium' ? 0.25 : 0.1,
+    battery: profile.batteryNeeds === 'more_than_day' ? 0.35 : profile.batteryNeeds === 'all_day' ? 0.25 : 0.15,
+    buildQuality: 0.1,
+  };
 
-  const { data, error } = await supabase
-    .from('saved_leads')
+  // Normalize weights
+  const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+  Object.keys(weights).forEach(key => {
+    weights[key as keyof typeof weights] /= totalWeight;
+  });
+
+  // Calculate gains
+  const performanceGainRaw = newProduct.performance_score - currentProduct.performance_score;
+  const cameraGainRaw = newProduct.camera_score - currentProduct.camera_score;
+  const batteryGainRaw = newProduct.battery_score - currentProduct.battery_score;
+  const buildGainRaw = newProduct.build_quality_score - currentProduct.build_quality_score;
+
+  // Weighted score (0-100 scale)
+  const weightedScore = Math.max(0, Math.min(100,
+    50 + (
+      performanceGainRaw * weights.performance * 2 +
+      cameraGainRaw * weights.camera * 2 +
+      batteryGainRaw * weights.battery * 2 +
+      buildGainRaw * weights.buildQuality * 2
+    )
+  ));
+
+  // Budget alignment bonus/penalty
+  let budgetModifier = 0;
+  const typicalPrice = newProduct.price_typical || newProduct.price_max || 3000;
+  
+  if (profile.budgetRange === 'economic' && typicalPrice <= 1500) budgetModifier = 10;
+  else if (profile.budgetRange === 'economic' && typicalPrice > 4000) budgetModifier = -15;
+  else if (profile.budgetRange === 'intermediate' && typicalPrice >= 1500 && typicalPrice <= 4000) budgetModifier = 10;
+  else if (profile.budgetRange === 'premium' && typicalPrice >= 4000) budgetModifier = 10;
+
+  const finalScore = Math.round(Math.max(0, Math.min(100, weightedScore + budgetModifier)));
+
+  // Determine recommendation
+  let recommendation: 'not_worth' | 'depends' | 'worth_it';
+  if (finalScore >= 71) recommendation = 'worth_it';
+  else if (finalScore >= 41) recommendation = 'depends';
+  else recommendation = 'not_worth';
+
+  // Analysis breakdown
+  const performanceGain: 'low' | 'medium' | 'high' = 
+    performanceGainRaw < 5 ? 'low' : performanceGainRaw < 15 ? 'medium' : 'high';
+
+  const purchaseTiming: 'urgent' | 'no_rush' | 'wait' =
+    currentProduct.performance_score < 60 ? 'urgent' : 
+    newProduct.year === new Date().getFullYear() ? 'no_rush' : 'wait';
+
+  const costBenefit: 'poor' | 'good' | 'excellent' =
+    finalScore < 40 ? 'poor' : finalScore < 70 ? 'good' : 'excellent';
+
+  // Generate conclusion
+  const conclusions: Record<string, string> = {
+    worth_it_intense: 'Para o seu perfil de uso intenso, trocar faz sentido. Os ganhos de desempenho serão perceptíveis no dia a dia.',
+    worth_it_intermediate: 'Para o seu perfil, trocar faz sentido, mas não vale pagar caro por recursos que você não vai usar. Priorize equilíbrio e bateria.',
+    worth_it_basic: 'A troca vale a pena, mas lembre-se: você não precisa do modelo mais caro para suas necessidades.',
+    depends: 'A troca pode valer a pena dependendo do preço. Aguarde promoções para uma decisão mais vantajosa.',
+    not_worth: 'Com base no seu uso, não faz sentido trocar agora. Seu aparelho atual ainda atende bem suas necessidades.',
+  };
+
+  let conclusion = conclusions.not_worth;
+  if (recommendation === 'worth_it') {
+    conclusion = conclusions[`worth_it_${profile.usageLevel}`] || conclusions.worth_it_intermediate;
+  } else if (recommendation === 'depends') {
+    conclusion = conclusions.depends;
+  }
+
+  return {
+    score: finalScore,
+    recommendation,
+    priceRange: {
+      min: newProduct.price_min || typicalPrice * 0.8,
+      max: newProduct.price_max || typicalPrice * 1.2,
+      typical: typicalPrice,
+    },
+    analysis: {
+      performanceGain,
+      purchaseTiming,
+      costBenefit,
+    },
+    conclusion,
+  };
+};
+
+export const saveComparisonStats = async (
+  categoryId: string,
+  currentProductId: string,
+  newProductId: string,
+  profile: UserProfile,
+  result: ComparisonResult
+) => {
+  const { error } = await supabase
+    .from('comparison_stats')
     .insert([{
-      user_id: user.id,
-      company_name: company.name,
-      cnpj: company.cnpj,
-      address: company.address,
-      city: company.city,
-      state: company.state,
-      phone: company.phone,
-      email: company.email,
-      website: company.website,
-      sector: company.sector,
-      company_size: company.size,
-    }])
-    .select()
-    .single();
+      category_id: categoryId,
+      current_product_id: currentProductId,
+      new_product_id: newProductId,
+      usage_profile: profile.usageLevel,
+      camera_importance: profile.cameraImportance,
+      battery_importance: profile.batteryNeeds,
+      budget_range: profile.budgetRange,
+      result_score: result.score,
+      recommendation: result.recommendation,
+    }]);
 
   if (error) {
-    console.error('Error saving lead:', error);
-    throw new Error(error.message);
-  }
-
-  return data as SavedLead;
-};
-
-export const getSavedLeads = async (): Promise<SavedLead[]> => {
-  const { data, error } = await supabase
-    .from('saved_leads')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching saved leads:', error);
-    return [];
-  }
-
-  return data as SavedLead[];
-};
-
-export const updateLeadStatus = async (leadId: string, status: SavedLead['status']) => {
-  const { error } = await supabase
-    .from('saved_leads')
-    .update({ status })
-    .eq('id', leadId);
-
-  if (error) {
-    console.error('Error updating lead status:', error);
-    throw new Error(error.message);
-  }
-};
-
-export const updateLeadNotes = async (leadId: string, notes: string) => {
-  const { error } = await supabase
-    .from('saved_leads')
-    .update({ notes })
-    .eq('id', leadId);
-
-  if (error) {
-    console.error('Error updating lead notes:', error);
-    throw new Error(error.message);
-  }
-};
-
-export const deleteLead = async (leadId: string) => {
-  const { error } = await supabase
-    .from('saved_leads')
-    .delete()
-    .eq('id', leadId);
-
-  if (error) {
-    console.error('Error deleting lead:', error);
-    throw new Error(error.message);
+    console.error('Error saving comparison stats:', error);
   }
 };
