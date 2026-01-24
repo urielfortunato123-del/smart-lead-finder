@@ -1,125 +1,168 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import Header from "@/components/Header";
-import SearchHero from "@/components/SearchHero";
-import StatsBar from "@/components/StatsBar";
-import ResultsSection from "@/components/ResultsSection";
-import Footer from "@/components/Footer";
-import { Company } from "@/types/company";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import { searchCompanies, saveSearchHistory, checkSearchLimit } from "@/services/api";
+import Header from "@/components/comparison/Header";
+import HeroSection from "@/components/comparison/HeroSection";
+import CategoryStep from "@/components/comparison/CategoryStep";
+import ProductStep from "@/components/comparison/ProductStep";
+import ProfileStep from "@/components/comparison/ProfileStep";
+import ResultStep from "@/components/comparison/ResultStep";
+import { ComparisonState, initialComparisonState } from "@/types/comparison";
+import { 
+  getProductById, 
+  calculateComparison, 
+  saveComparisonStats,
+  Product,
+  ComparisonResult,
+  UserProfile 
+} from "@/services/api";
 
 const Index = () => {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [remainingSearches, setRemainingSearches] = useState<number | null>(null);
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const [started, setStarted] = useState(false);
+  const [state, setState] = useState<ComparisonState>(initialComparisonState);
+  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
+  const [newProduct, setNewProduct] = useState<Product | null>(null);
+  const [result, setResult] = useState<ComparisonResult | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Check remaining searches on load
-  useEffect(() => {
-    if (user) {
-      checkSearchLimit().then((result) => {
-        if (result.remaining !== undefined) {
-          setRemainingSearches(result.remaining);
-        }
-      });
+  const handleStart = () => {
+    setStarted(true);
+    setState({ ...initialComparisonState, step: 1 });
+  };
+
+  const handleBack = () => {
+    if (state.step === 1) {
+      setStarted(false);
+      setState(initialComparisonState);
+    } else {
+      setState({ ...state, step: (state.step - 1) as 1 | 2 | 3 | 4 });
     }
-  }, [user]);
+    setResult(null);
+  };
 
-  const handleSearch = async (query: string) => {
-    if (!user) {
-      toast({
-        title: "Faça login",
-        description: "Você precisa estar logado para fazer buscas",
-        variant: "destructive",
-      });
-      navigate("/auth");
-      return;
-    }
+  const handleCategorySelect = (categoryId: string) => {
+    setState({ ...state, categoryId, step: 2 });
+  };
 
-    setSearchQuery(query);
-    setIsLoading(true);
-    setCompanies([]);
+  const handleSelectCurrentProduct = (productId: string) => {
+    setState({ ...state, currentProductId: productId });
+  };
+
+  const handleSelectNewProduct = (productId: string) => {
+    setState({ ...state, newProductId: productId });
+  };
+
+  const handleProductNext = () => {
+    setState({ ...state, step: 3 });
+  };
+
+  const handleProfileUpdate = (key: keyof ComparisonState['profile'], value: string) => {
+    setState({
+      ...state,
+      profile: { ...state.profile, [key]: value },
+    });
+  };
+
+  const handleProfileNext = async () => {
+    if (!state.currentProductId || !state.newProductId || !state.categoryId) return;
+
+    setLoading(true);
 
     try {
-      const results = await searchCompanies(query);
-      setCompanies(results);
-      
-      // Save search history
-      await saveSearchHistory(query, results.length);
+      const [current, newProd] = await Promise.all([
+        getProductById(state.currentProductId),
+        getProductById(state.newProductId),
+      ]);
 
-      // Update remaining searches
-      const limitCheck = await checkSearchLimit();
-      if (limitCheck.remaining !== undefined) {
-        setRemainingSearches(limitCheck.remaining);
+      if (!current || !newProd) {
+        throw new Error('Produto não encontrado');
       }
 
-      toast({
-        title: "Busca concluída!",
-        description: `Encontramos ${results.length} empresas no setor de ${query}`,
-      });
+      setCurrentProduct(current);
+      setNewProduct(newProd);
+
+      const profile: UserProfile = {
+        usageLevel: state.profile.usageLevel!,
+        cameraImportance: state.profile.cameraImportance!,
+        batteryNeeds: state.profile.batteryNeeds!,
+        budgetRange: state.profile.budgetRange!,
+      };
+
+      const comparisonResult = calculateComparison(current, newProd, profile);
+      setResult(comparisonResult);
+
+      // Save stats (fire and forget)
+      saveComparisonStats(
+        state.categoryId,
+        state.currentProductId,
+        state.newProductId,
+        profile,
+        comparisonResult
+      );
+
+      setState({ ...state, step: 4 });
     } catch (error) {
-      console.error('Search error:', error);
-      const errorMessage = error instanceof Error ? error.message : "Não foi possível buscar empresas";
-      
-      if (errorMessage.includes('limite') || errorMessage.includes('upgrade')) {
-        toast({
-          title: "Limite de buscas atingido",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        // Redirect to pricing after a short delay
-        setTimeout(() => navigate('/pricing'), 2000);
-      } else {
-        toast({
-          title: "Erro na busca",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      }
+      console.error('Error calculating comparison:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
+  const handleNewComparison = () => {
+    setStarted(false);
+    setState(initialComparisonState);
+    setCurrentProduct(null);
+    setNewProduct(null);
+    setResult(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Calculando análise...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      <main className="pt-16 md:pt-20 flex-1">
-        {user && remainingSearches !== null && remainingSearches < 999 && (
-          <div className="bg-secondary/50 border-b border-border py-2 px-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              {remainingSearches > 0 ? (
-                <>
-                  Você tem <span className="text-primary font-semibold">{remainingSearches}</span> busca{remainingSearches !== 1 ? 's' : ''} restante{remainingSearches !== 1 ? 's' : ''} hoje.{" "}
-                  <a href="/pricing" className="text-accent hover:underline">
-                    Fazer upgrade
-                  </a>
-                </>
-              ) : (
-                <>
-                  Limite de buscas atingido.{" "}
-                  <a href="/pricing" className="text-accent hover:underline font-semibold">
-                    Faça upgrade para continuar
-                  </a>
-                </>
-              )}
-            </p>
-          </div>
+    <div className="min-h-screen bg-background">
+      <Header onBack={handleBack} showBack={started} />
+      <main className="pt-20">
+        {!started && <HeroSection onStart={handleStart} />}
+        
+        {started && state.step === 1 && (
+          <CategoryStep onSelect={handleCategorySelect} />
         )}
-        <SearchHero onSearch={handleSearch} isLoading={isLoading} />
-        <StatsBar />
-        <ResultsSection
-          companies={companies}
-          searchQuery={searchQuery}
-          isLoading={isLoading}
-        />
+        
+        {started && state.step === 2 && state.categoryId && (
+          <ProductStep
+            categoryId={state.categoryId}
+            currentProductId={state.currentProductId}
+            newProductId={state.newProductId}
+            onSelectCurrent={handleSelectCurrentProduct}
+            onSelectNew={handleSelectNewProduct}
+            onNext={handleProductNext}
+          />
+        )}
+        
+        {started && state.step === 3 && (
+          <ProfileStep
+            profile={state.profile}
+            onUpdate={handleProfileUpdate}
+            onNext={handleProfileNext}
+          />
+        )}
+        
+        {started && state.step === 4 && result && currentProduct && newProduct && (
+          <ResultStep
+            result={result}
+            currentProduct={currentProduct}
+            newProduct={newProduct}
+            onNewComparison={handleNewComparison}
+          />
+        )}
       </main>
-      <Footer />
     </div>
   );
 };

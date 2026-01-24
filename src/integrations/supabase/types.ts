@@ -14,260 +14,168 @@ export type Database = {
   }
   public: {
     Tables: {
-      daily_searches: {
+      categories: {
         Row: {
           created_at: string | null
+          icon: string
           id: string
-          search_count: number | null
-          search_date: string
-          user_id: string
+          name: string
+          slug: string
         }
         Insert: {
           created_at?: string | null
+          icon: string
           id?: string
-          search_count?: number | null
-          search_date?: string
-          user_id: string
+          name: string
+          slug: string
         }
         Update: {
           created_at?: string | null
+          icon?: string
           id?: string
-          search_count?: number | null
-          search_date?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      plans: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          duration_months: number
-          id: string
-          is_active: boolean | null
-          name: string
-          price: number
-          searches_per_day: number
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          duration_months?: number
-          id: string
-          is_active?: boolean | null
-          name: string
-          price?: number
-          searches_per_day?: number
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          duration_months?: number
-          id?: string
-          is_active?: boolean | null
           name?: string
-          price?: number
-          searches_per_day?: number
+          slug?: string
         }
         Relationships: []
       }
-      profiles: {
+      comparison_stats: {
         Row: {
-          avatar_url: string | null
-          company_name: string | null
+          battery_importance: string | null
+          budget_range: string | null
+          camera_importance: string | null
+          category_id: string | null
           created_at: string | null
-          full_name: string | null
+          current_product_id: string | null
           id: string
-          role: string | null
-          updated_at: string | null
+          new_product_id: string | null
+          recommendation: string | null
+          result_score: number | null
+          usage_profile: string | null
         }
         Insert: {
-          avatar_url?: string | null
-          company_name?: string | null
+          battery_importance?: string | null
+          budget_range?: string | null
+          camera_importance?: string | null
+          category_id?: string | null
           created_at?: string | null
-          full_name?: string | null
-          id: string
-          role?: string | null
-          updated_at?: string | null
+          current_product_id?: string | null
+          id?: string
+          new_product_id?: string | null
+          recommendation?: string | null
+          result_score?: number | null
+          usage_profile?: string | null
         }
         Update: {
-          avatar_url?: string | null
-          company_name?: string | null
+          battery_importance?: string | null
+          budget_range?: string | null
+          camera_importance?: string | null
+          category_id?: string | null
           created_at?: string | null
-          full_name?: string | null
+          current_product_id?: string | null
           id?: string
-          role?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      saved_leads: {
-        Row: {
-          address: string | null
-          city: string | null
-          cnpj: string | null
-          company_name: string
-          company_size: string | null
-          created_at: string | null
-          email: string | null
-          id: string
-          notes: string | null
-          phone: string | null
-          sector: string | null
-          state: string | null
-          status: string | null
-          updated_at: string | null
-          user_id: string
-          website: string | null
-        }
-        Insert: {
-          address?: string | null
-          city?: string | null
-          cnpj?: string | null
-          company_name: string
-          company_size?: string | null
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          notes?: string | null
-          phone?: string | null
-          sector?: string | null
-          state?: string | null
-          status?: string | null
-          updated_at?: string | null
-          user_id: string
-          website?: string | null
-        }
-        Update: {
-          address?: string | null
-          city?: string | null
-          cnpj?: string | null
-          company_name?: string
-          company_size?: string | null
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          notes?: string | null
-          phone?: string | null
-          sector?: string | null
-          state?: string | null
-          status?: string | null
-          updated_at?: string | null
-          user_id?: string
-          website?: string | null
-        }
-        Relationships: []
-      }
-      search_history: {
-        Row: {
-          created_at: string | null
-          id: string
-          query: string
-          results_count: number | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          query: string
-          results_count?: number | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          query?: string
-          results_count?: number | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      subscriptions: {
-        Row: {
-          created_at: string | null
-          ends_at: string | null
-          id: string
-          is_active: boolean | null
-          payment_method: string | null
-          payment_reference: string | null
-          payment_status: string | null
-          plan_id: string
-          starts_at: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          ends_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          payment_method?: string | null
-          payment_reference?: string | null
-          payment_status?: string | null
-          plan_id?: string
-          starts_at?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          ends_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          payment_method?: string | null
-          payment_reference?: string | null
-          payment_status?: string | null
-          plan_id?: string
-          starts_at?: string | null
-          updated_at?: string | null
-          user_id?: string
+          new_product_id?: string | null
+          recommendation?: string | null
+          result_score?: number | null
+          usage_profile?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "subscriptions_plan_id_fkey"
-            columns: ["plan_id"]
+            foreignKeyName: "comparison_stats_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: "plans"
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparison_stats_current_product_id_fkey"
+            columns: ["current_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparison_stats_new_product_id_fkey"
+            columns: ["new_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
       }
-      user_roles: {
+      products: {
         Row: {
-          created_at: string
+          battery_score: number | null
+          brand: string | null
+          build_quality_score: number | null
+          camera_score: number | null
+          category_id: string | null
+          created_at: string | null
           id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
+          model: string | null
+          name: string
+          performance_score: number | null
+          price_max: number | null
+          price_min: number | null
+          price_typical: number | null
+          specs: Json | null
+          updated_at: string | null
+          year: number | null
         }
         Insert: {
-          created_at?: string
+          battery_score?: number | null
+          brand?: string | null
+          build_quality_score?: number | null
+          camera_score?: number | null
+          category_id?: string | null
+          created_at?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id: string
+          model?: string | null
+          name: string
+          performance_score?: number | null
+          price_max?: number | null
+          price_min?: number | null
+          price_typical?: number | null
+          specs?: Json | null
+          updated_at?: string | null
+          year?: number | null
         }
         Update: {
-          created_at?: string
+          battery_score?: number | null
+          brand?: string | null
+          build_quality_score?: number | null
+          camera_score?: number | null
+          category_id?: string | null
+          created_at?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
+          model?: string | null
+          name?: string
+          performance_score?: number | null
+          price_max?: number | null
+          price_min?: number | null
+          price_typical?: number | null
+          specs?: Json | null
+          updated_at?: string | null
+          year?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
-      app_role: "admin" | "user"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -394,8 +302,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["admin", "user"],
-    },
+    Enums: {},
   },
 } as const
